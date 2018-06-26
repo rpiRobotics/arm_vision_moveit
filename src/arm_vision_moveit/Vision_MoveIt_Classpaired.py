@@ -19,7 +19,8 @@ import numpy as np
 from tf.transformations import *
 from tf2_msgs.msg import TFMessage
 import copy
-
+import yaml
+from rospkg import RosPack
 #import rpi_ati_net_ft
 
 
@@ -36,33 +37,39 @@ class MovementPlan:
 
     
 '''	
-  
-class VisionMoveIt:
-    def __init__(self,arm_controller_commander):
-	self.ft_threshold=[300,300,300,300,300,300]
-	self.Force_Measurement=0
-	self.pose_target=0
-	#could also be inserted into the starting section of control code for better visibility
-	self.armcontroller=arm_controller_commander
-	self.pose_targets=[]
-	self.plans=[]
-	self.Cameras=Camera_Class.Camera_Class()
 
-    def camera_read(self):
+class VisionMoveIt:
+	def __init__(self,arm_controller_commander):
+		rp=RosPack()
+		path=rp.get_path('arm_vision_moveit')
+		self.yamlfile=path+'/pathdetails2.yaml'
+		#self.ft_threshold=[300,300,300,300,300,300]
+		self.Force_Measurement=0
+		self.pose_target=0
+		#could also be inserted into the starting section of control code for better visibility
+		self.armcontroller=arm_controller_commander
+		self.pose_targets=[]
+		self.plans=[]
+		self.Cameras=Camera_Class.Camera_Class()
+
+	def camera_read(self):
 	
 		self.P,self.Q=self.Cameras.CameraService()
 
-    def moveit_init(self):
+	def moveit_init(self):
 	
 		self.group=self.armcontroller.move_it_init()
 
-    #ROS service calls to check system variables
-    def set_positions(self):
-		print "============ Printing robot Pose"
-		print self.group.get_current_pose().pose
+	#ROS service calls to check system variables
+	def load_controllerparams_from_yaml(self):
+		self.armcontroller.setcontroller()
+
+	def load_offsets_from_yaml(self):
 		Q=self.Q
 		P=self.P
-	
+		with open(self.yamlfile,'r') as stream:
+			offsets=yaml.load(stream)
+
 		tic = timeit.default_timer()
 		dt = 0
 		while dt< 3:
@@ -70,35 +77,64 @@ class VisionMoveIt:
 			dt = toc - tic
 
 		print 'Start'
-	
+
+		pose_target = geometry_msgs.msg.Pose()
+		
+		for x in range(1,offsets['numberofpaths']+1):
+			pose_target.orientation.x = Q[1]
+			pose_target.orientation.y = Q[2]
+			pose_target.orientation.z = Q[3]
+			pose_target.orientation.w = Q[0] 
+			pose_target.position.x = P[0][0]
+			pose_target.position.y = P[0][1]
+			pose_target.position.z = P[0][2]
+			
+			pose_target = geometry_msgs.msg.Pose()
+			pose_target.orientation.x +=float(offsets[x]['endingrotationoffset'][1])
+			pose_target.orientation.y +=float(offsets[x]['endingrotationoffset'][2])#0.707
+			pose_target.orientation.z +=float(offsets[x]['endingrotationoffset'][3])#0.707
+			pose_target.orientation.w +=float(offsets[x]['endingrotationoffset'][0])#qoa[3] #0#0
+			pose_target.position.x +=float(offsets[x]['endingpositionoffset'][0])
+			'''
+			#pose_target.position.y=P[0][1]+offsets[x]['endingpositionoffset'][1]#-2.02630600362
+			pose_target.position.z =P[0][2]+offsets[x]['endingpositionoffset'][2]
+			
+			#pose_target.orientation=np.add(pose_target.orientation,np.array(offsets[x]['endingrotationoffset']))
+			self.pose_targets.append(pose_target)
+			
+			print "Poses:"
+			print pose_target
+
+	def set_positions(self):
+		print "============ Printing robot Pose"
+		print self.group.get_current_pose().pose
+		print self.Q
+		print self.P
+		Q=self.Q
+		P=self.P
+		self.load_offsets_from_yaml()
+		
 		print "============ Printing robot Pose"
 		print self.group.get_current_pose()
 		#print robot.get_current_state().joint_state.position
 		print "============ Generating plan 1"
-		pose_target = geometry_msgs.msg.Pose()
-		pose_target.orientation.x = Q[1]
-		pose_target.orientation.y = Q[2]#0.707
-		pose_target.orientation.z = Q[3]#0.707
-		pose_target.orientation.w = Q[0]#qoa[3] #0#0
-		pose_target.position.x = P[0][0]
-		pose_target.position.y = P[0][1]#-2.02630600362
-		pose_target.position.z = P[0][2] + 0.3
-		self.pose_targets.append(pose_target)
+		
+		#self.pose_targets.append(pose_target)
 		#self.group.set_pose_target(pose_target)
 	
 
 		#print "============ Printing robot Pose"
 		#print group.get_current_pose()  
 		#print "============ Generating plan 2"
-		pose_target2 = copy.deepcopy(pose_target)
-		pose_target2.position.z -= 0.45
-		self.pose_targets.append(pose_target2)
+		#pose_target2 = copy.deepcopy(pose_target)
+		#pose_target2.position.z -= 0.45
+		#self.pose_targets.append(pose_target2)
 		#print "============ Generating plan 3"
-		pose_target3 = copy.deepcopy(pose_target)
-		pose_target3.position.z += 0.25
-		self.pose_targets.append(pose_target3)
+		#pose_target3 = copy.deepcopy(pose_target)
+		#pose_target3.position.z += 0.25
+		#self.pose_targets.append(pose_target3)
 
-    def generate_plan(self,plan_num):
+	def generate_plan(self,plan_num):
 	#done so that the first position the robot will move to is shown first
 	#downside to this approach is that Rviz will not automatically show latest plan, unless 
 	#in the execute function we add in a command to load in the previously generated plan to
@@ -112,7 +148,7 @@ class VisionMoveIt:
             #print plan
 		cnt = 0
 		while( (not plan.joint_trajectory.points) and (cnt<3)):
-			print "============ Generating plan "+ str(i)
+			print "============ Generating plan "+ str(plan_num)
 			plan = group.plan()
 			cnt = cnt+1
 
@@ -120,19 +156,19 @@ class VisionMoveIt:
         #self.plans.insert(0,plan)
 	#i-=1
 
-    def execute_plans(self,plan):
-	#eventually might like a for loop here if speeds are more consistent, or could use switch statement to call set controller
-	'''
-	display_trajectory.trajectory_start=self.group.get_current_pose()
-	display_trajectory.trajectory.append(self.plans[plan_num])
-	self.armcontroller.display_trajectory_publisher.publish(display_trajectory)
-	'''
-	#print self.plans[plan_num]        
-	#print "============ Executing plan "+str(plan_num)
-        self.group.execute(plan)
-        print 'Execution Finished.'
+	def execute_plans(self,plan):
+		#eventually might like a for loop here if speeds are more consistent, or could use switch statement to 		call set controller
+		'''
+		display_trajectory.trajectory_start=self.group.get_current_pose()
+		display_trajectory.trajectory.append(self.plans[plan_num])
+		self.armcontroller.display_trajectory_publisher.publish(display_trajectory)
+		'''
+		#print self.plans[plan_num]        
+		#print "============ Executing plan "+str(plan_num)
+		self.group.execute(plan)
+		print 'Execution Finished.'
 
-    def reset_pos(self):
+	def reset_pos(self):
 		P = [[ 1.8288, -0.0447, 1.237]]
 		Q = [0.718181636243,-0.0836401543762,0.687115714468,0.0713544453462]
 		self.armcontroller.set_controller(4,0.5,[])
@@ -158,7 +194,7 @@ class VisionMoveIt:
 	 	print "============ Executing plan1"
 		self.group.execute(plan1)
 		print 'Execution Finished.'
-
+'''
 if __name__ == '__main__':
     armcontroller=arm_controller_commander.ARMControllerCommander()
     new=VisionMoveIt(armcontroller)
@@ -169,7 +205,7 @@ if __name__ == '__main__':
     Robot_Pos = []
     Robot_Joint = []
     #new.reset_pos()
-'''  
+  
     armcontroller.set_controller(4,0.7,new.ft_threshold)
     
     plan1=new.generate_plan(1)

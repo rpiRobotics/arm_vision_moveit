@@ -38,6 +38,7 @@ import cv2.aruco as aruco
 import cv2
 from tf.transformations import *
 import yaml
+from rospkg import RosPack
 #from CameraParams import *
 
 
@@ -51,8 +52,12 @@ class Camera_Class:
 		:return: True if successful, False otherwise.
 		:rtype: bool
 		"""
+		rp=RosPack()
+		self.path=rp.get_path('arm_vision_moveit')
+		
 		i=0
-		camera_yaml_files=['camera1_params.yaml']
+		camerayaml=self.path+'/camera1_params.yaml'
+		camera_yaml_files=[camerayaml]
 		with open(camera_yaml_files[i],'r') as stream:
 			camera_params=yaml.load(stream)
 		# Retrieve singleton reference to system object
@@ -442,7 +447,8 @@ class Camera_Class:
 	def get_object_pose_m(self,corners, camMatrix, distCoeff):
 		# AR Tag Dimensions
 		d = 65.9
-		with open("ARtag1.yaml",'r') as stream:
+		arpath=self.path+'/ARtag1.yaml'
+		with open(arpath,'r') as stream:
 			self.ARtagparams=yaml.load(stream)
 		
 		objPoints=np.asarray(self.ARtagparams['points'])

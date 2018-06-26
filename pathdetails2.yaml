@@ -1,0 +1,22 @@
+numberofpaths: 3
+0:
+  endingpositionoffset: [0,0,0]
+  endingrotationoffset: [0,0,0,0]
+1:
+  ftthreshold: [300,300,300,300,300,300]
+  speedscalar: 0.7
+  endingpositionoffset: [0,0,0.3]
+  endingrotationoffset: [0,0,0,0]
+2:
+  ftthreshold: [300,300,300,300,300,300]
+  speedscalar: 0.3
+  endingpositionoffset: [0,0,-0.45]
+  endingrotationoffset: [0,0,0,0]
+3:
+  ftthreshold: []
+  speedscalar: 0.5
+  endingpositionoffset: [0,0,0.25]
+  endingrotationoffset: [0,0,0,0]
+
+resetposition: [[ 1.8288, -0.0447, 1.237]]
+resetorientation: [0.718181636243,-0.0836401543762,0.687115714468,0.0713544453462]
