@@ -10,7 +10,7 @@ numberofpaths: 3
 2:
   ftthreshold: [300,300,300,300,300,300]
   speedscalar: 0.3
-  endingpositionoffset: [0,0,-0.45]
+  endingpositionoffset: [0,0,-0.15]
   endingrotationoffset: [0,0,0,0]
 3:
   ftthreshold: []

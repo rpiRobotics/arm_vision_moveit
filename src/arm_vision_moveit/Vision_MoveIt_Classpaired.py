@@ -61,8 +61,8 @@ class VisionMoveIt:
 		self.group=self.armcontroller.move_it_init()
 
 	#ROS service calls to check system variables
-	def load_controllerparams_from_yaml(self):
-		self.armcontroller.setcontroller()
+	#def load_controllerparams_from_yaml(self):
+	#	self.armcontroller.setcontroller()
 
 	def load_offsets_from_yaml(self):
 		Q=self.Q
@@ -79,28 +79,27 @@ class VisionMoveIt:
 		print 'Start'
 
 		pose_target = geometry_msgs.msg.Pose()
-		
+		pose_target.orientation.x = Q[1]
+		pose_target.orientation.y = Q[2]
+		pose_target.orientation.z = Q[3]
+		pose_target.orientation.w = Q[0] 
+		pose_target.position.x = P[0][0]
+		pose_target.position.y = P[0][1]
+		pose_target.position.z = P[0][2]
 		for x in range(1,offsets['numberofpaths']+1):
-			pose_target.orientation.x = Q[1]
-			pose_target.orientation.y = Q[2]
-			pose_target.orientation.z = Q[3]
-			pose_target.orientation.w = Q[0] 
-			pose_target.position.x = P[0][0]
-			pose_target.position.y = P[0][1]
-			pose_target.position.z = P[0][2]
+			pose_temp=copy.deepcopy(pose_target)
 			
-			pose_target = geometry_msgs.msg.Pose()
-			pose_target.orientation.x +=float(offsets[x]['endingrotationoffset'][1])
-			pose_target.orientation.y +=float(offsets[x]['endingrotationoffset'][2])#0.707
-			pose_target.orientation.z +=float(offsets[x]['endingrotationoffset'][3])#0.707
-			pose_target.orientation.w +=float(offsets[x]['endingrotationoffset'][0])#qoa[3] #0#0
-			pose_target.position.x +=float(offsets[x]['endingpositionoffset'][0])
-			'''
-			#pose_target.position.y=P[0][1]+offsets[x]['endingpositionoffset'][1]#-2.02630600362
-			pose_target.position.z =P[0][2]+offsets[x]['endingpositionoffset'][2]
+			#pose_target = geometry_msgs.msg.Pose()
+			pose_temp.orientation.x +=offsets[x]['endingrotationoffset'][1]
+			pose_temp.orientation.y +=offsets[x]['endingrotationoffset'][2]#0.707
+			pose_temp.orientation.z +=offsets[x]['endingrotationoffset'][3]#0.707
+			pose_temp.orientation.w +=offsets[x]['endingrotationoffset'][0]#qoa[3] #0#0 
+			pose_temp.position.x +=offsets[x]['endingpositionoffset'][0]
+			pose_temp.position.y +=offsets[x]['endingpositionoffset'][1]#-2.02630600362
+			pose_temp.position.z +=offsets[x]['endingpositionoffset'][2]
 			
 			#pose_target.orientation=np.add(pose_target.orientation,np.array(offsets[x]['endingrotationoffset']))
-			self.pose_targets.append(pose_target)
+			self.pose_targets.append(pose_temp)
 			
 			print "Poses:"
 			print pose_target
@@ -117,7 +116,7 @@ class VisionMoveIt:
 		print "============ Printing robot Pose"
 		print self.group.get_current_pose()
 		#print robot.get_current_state().joint_state.position
-		print "============ Generating plan 1"
+	#	print "============ Generating plan 1"
 		
 		#self.pose_targets.append(pose_target)
 		#self.group.set_pose_target(pose_target)
