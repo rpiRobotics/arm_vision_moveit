@@ -61,14 +61,16 @@ class VisionMoveIt:
 		self.group=self.armcontroller.move_it_init()
 
 	#ROS service calls to check system variables
-	#def load_controllerparams_from_yaml(self):
-	#	self.armcontroller.setcontroller()
+	def load_controllerparams_from_yaml(self,plan_num):
+		loaded_speed_scalar=self.offsets[plan_num]['speed_scalar']
+		loaded_ft=self.offsets[plan_num]['ftthreshold']
+		self.armcontroller.set_controller(4,loaded_speed,loaded_ft)
 
 	def load_offsets_from_yaml(self):
 		Q=self.Q
 		P=self.P
 		with open(self.yamlfile,'r') as stream:
-			offsets=yaml.load(stream)
+			self.offsets=yaml.load(stream)
 
 		tic = timeit.default_timer()
 		dt = 0
@@ -150,6 +152,8 @@ class VisionMoveIt:
 			print "============ Generating plan "+ str(plan_num)
 			plan = group.plan()
 			cnt = cnt+1
+		
+		self.load_controllerparams_from_yaml(plan_num)
 
 		return plan
         #self.plans.insert(0,plan)
@@ -164,7 +168,7 @@ class VisionMoveIt:
 		'''
 		#print self.plans[plan_num]        
 		#print "============ Executing plan "+str(plan_num)
-		self.group.execute(plan)
+		self.group.asyncExecute(plan)
 		print 'Execution Finished.'
 
 	def reset_pos(self):
@@ -191,7 +195,7 @@ class VisionMoveIt:
 			cnt = cnt+1
 		time.sleep(5)    
 	 	print "============ Executing plan1"
-		self.group.execute(plan1)
+		self.group.asyncExecute(plan1)
 		print 'Execution Finished.'
 '''
 if __name__ == '__main__':
