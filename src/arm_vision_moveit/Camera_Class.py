@@ -120,12 +120,12 @@ class Camera_Class:
 					idx_All[idx-1,:] = idx
 					Corners_All[idx-1,:,:] = m[0,:,:]
 				
-				Pca, Rca = self.get_object_pose_m(np.reshape(Corners_All[0:4,:,:],[16,2]),np.asarray(camera_params['camMatrix']), np.asarray(camera_params['distCoeff']))
+				Pca, Rca = self.get_object_pose_m(np.reshape(Corners_All[0:4,:,:],[16,2]),np.asarray(camera_params['camera_intrinsic_parameters']), np.asarray(camera_params['distCoeff']))
 				Rcatmp = np.vstack((np.hstack((Rca,[[0],[0],[0]])),[0,0,0,1]))  
 				qca = quaternion_from_matrix(Rcatmp)
 				Rca = quaternion_matrix([1.0*qca[1],1.0*qca[0],-1.0*qca[3],-1.0*qca[2]])
 				Rca = Rca[0:3,0:3]
-				Poa, Roa = self.map_camera2robot(Pca,Rca,camera_params['M'],camera_params['R'])
+				Poa, Roa = self.map_camera2robot(Pca,Rca,camera_params['relative_camera_orientation'],camera_params['relative_camera_position'])
 				Psetpre=np.asarray(self.ARtagparams['Pset'])
 				#print Psetpre
 				#print len(Psetpre)

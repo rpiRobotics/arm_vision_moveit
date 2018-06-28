@@ -20,18 +20,19 @@ class ARMControllerCommander:
         
         self.set_controller_mode=rospy.ServiceProxy('set_controller_mode', SetControllerMode)
         self.set_digital_io=rospy.ServiceProxy('rapid/set_digital_io', RapidSetDigitalIO)
-    def move_it_init(self):
+    def move_it_init(self,moveit_group_name,goal_position_tolerance,replanning,planner_id,num_planning_attempts):
         moveit_commander.roscpp_initialize(sys.argv)
         #rospy.init_node('collision_checker','move_group_python_interface_tutorial', anonymous=True)
         
         ## MoveIt! Initialization
         robot = moveit_commander.RobotCommander()
         scene = moveit_commander.PlanningSceneInterface()
-        group = moveit_commander.MoveGroupCommander("move_group")
-        group.set_goal_position_tolerance(0.04)
-        group.allow_replanning(True)
-        group.set_planner_id("RRTConnectkConfigDefault") #RRTConnectkConfigDefault/SBLkConfigDefault/KPIECEkConfigDefault/BKPIECEkConfigDefault/LBKPIECEkConfigDefault/
-        group.set_num_planning_attempts(5)
+        group = moveit_commander.MoveGroupCommander(moveit_group_name)
+        group.set_goal_position_tolerance(goal_position_tolerance)
+        group.allow_replanning(replanning)
+		#specifies which path planner to use for the Moveit
+        group.set_planner_id(planner_id) #RRTConnectkConfigDefault/SBLkConfigDefault/KPIECEkConfigDefault/BKPIECEkConfigDefault/LBKPIECEkConfigDefault/
+        group.set_num_planning_attempts(num_planning_attempts)
         self.display_trajectory_publisher = rospy.Publisher(
                                       '/move_group/display_planned_path',
                                       moveit_msgs.msg.DisplayTrajectory)

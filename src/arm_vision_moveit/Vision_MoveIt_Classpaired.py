@@ -10,7 +10,7 @@ import Camera_Class
 import sys
 import copy
 import rospy
-import arm_controller_commander
+#import arm_controller_commander
 import geometry_msgs.msg
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
@@ -39,39 +39,60 @@ class MovementPlan:
 '''	
 
 class VisionMoveIt:
-	def __init__(self,arm_controller_commander):
+	def __init__(self,arm_controller_commander,change_controller_state):
 		rp=RosPack()
 		path=rp.get_path('arm_vision_moveit')
 		self.yamlfile=path+'/pathdetails2.yaml'
 		#self.ft_threshold=[300,300,300,300,300,300]
 		self.Force_Measurement=0
 		self.pose_target=0
+
+		self.moveit_group_name='move_group'
+		self.goal_position_tolerance=0.04
+		self.allow_replanning=True
+		self.planner_id='TRRTkConfigDefault'
+		self.num_planning_attempts=5
 		#could also be inserted into the starting section of control code for better visibility
 		self.armcontroller=arm_controller_commander
+		self.change_controller_state=change_controller_state
 		self.pose_targets=[]
 		self.plans=[]
 		self.Cameras=Camera_Class.Camera_Class()
 
 	def camera_read(self):
-	
+		print self.group.get_current_pose()
 		self.P,self.Q=self.Cameras.CameraService()
-
+		print 'P:'
+		print self.P
+		print 'Q'
+		print self.Q
 	def moveit_init(self):
 	
-		self.group=self.armcontroller.move_it_init()
+		self.group=self.armcontroller.move_it_init(self.moveit_group_name,self.goal_position_tolerance,self.allow_replanning,self.planner_id,self.num_planning_attempts)
 
 	#ROS service calls to check system variables
 	def load_controllerparams_from_yaml(self,plan_num):
-		loaded_speed_scalar=self.offsets[plan_num]['speed_scalar']
+		loaded_speed_scalar=self.offsets[plan_num]['speedscalar']
 		loaded_ft=self.offsets[plan_num]['ftthreshold']
-		self.armcontroller.set_controller(4,loaded_speed,loaded_ft)
+		self.change_controller_state(4,loaded_speed_scalar,loaded_ft)
 
 	def load_offsets_from_yaml(self):
-		Q=self.Q
-		P=self.P
+		
 		with open(self.yamlfile,'r') as stream:
 			self.offsets=yaml.load(stream)
 
+		
+	def set_positions(self):
+		print "============ Printing robot Pose"
+		print self.group.get_current_pose().pose
+		print self.Q
+		print self.P
+		Q=self.Q
+		P=self.P
+		#self.load_offsets_from_yaml()
+		offsets=self.offsets
+		print "============ Printing robot Pose"
+		print self.group.get_current_pose()
 		tic = timeit.default_timer()
 		dt = 0
 		while dt< 3:
@@ -103,20 +124,9 @@ class VisionMoveIt:
 			#pose_target.orientation=np.add(pose_target.orientation,np.array(offsets[x]['endingrotationoffset']))
 			self.pose_targets.append(pose_temp)
 			
-			print "Poses:"
-			print pose_target
+			#print "Poses:"
+			#print pose_target
 
-	def set_positions(self):
-		print "============ Printing robot Pose"
-		print self.group.get_current_pose().pose
-		print self.Q
-		print self.P
-		Q=self.Q
-		P=self.P
-		self.load_offsets_from_yaml()
-		
-		print "============ Printing robot Pose"
-		print self.group.get_current_pose()
 		#print robot.get_current_state().joint_state.position
 	#	print "============ Generating plan 1"
 		
@@ -168,13 +178,15 @@ class VisionMoveIt:
 		'''
 		#print self.plans[plan_num]        
 		#print "============ Executing plan "+str(plan_num)
-		self.group.asyncExecute(plan)
+		self.group.execute(plan)
+		print self.group.get_current_pose().pose
 		print 'Execution Finished.'
 
 	def reset_pos(self):
-		P = [[ 1.8288, -0.0447, 1.237]]
-		Q = [0.718181636243,-0.0836401543762,0.687115714468,0.0713544453462]
-		self.armcontroller.set_controller(4,0.5,[])
+		P = self.offsets['resetposition']
+		Q = self.offsets['resetorientation']
+		reset_speed_scalar=self.offsets['resetspeedscalar']
+		self.change_controller_state(4,reset_speed_scalar,[])
 		print self.group.get_current_pose()  
         #print robot.get_current_state().joint_state.position
 		print "============ Generating plan 1"
@@ -195,7 +207,7 @@ class VisionMoveIt:
 			cnt = cnt+1
 		time.sleep(5)    
 	 	print "============ Executing plan1"
-		self.group.asyncExecute(plan1)
+		self.group.execute(plan1,False)
 		print 'Execution Finished.'
 '''
 if __name__ == '__main__':
